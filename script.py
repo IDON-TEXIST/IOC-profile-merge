@@ -2,7 +2,6 @@ from requests import ReadTimeout
 import pywikibot
 import requests
 import re
-import time
 from pywikibot import pagegenerators
 
 site = pywikibot.Site()
@@ -30,7 +29,6 @@ for page in pageset:
             page.text = re.sub("\n.*\{\{" + REPLACED_TEMPLATE + ".*?\}\}", "", page.text)
             try:
                 page.save(EDIT_SUMMARY, minor=False, botflag=True)
-                time.sleep(30)
             except pywikibot.exceptions.LockedPageError:
                 print(page.title() + " is protected")
             finally:
@@ -45,7 +43,6 @@ for page in pageset:
                     page.text = re.sub("\n.*\{\{" + REPLACED_TEMPLATE + ".*?\}\}", "", page.text)
                     try:
                         page.save(EDIT_SUMMARY, minor=False, botflag=True)
-                        time.sleep(30)
                     except pywikibot.exceptions.LockedPageError:
                         print(page.title() + " is protected")
                     finally:
@@ -92,7 +89,6 @@ for page in pageset:
     
     try:
         page.save(EDIT_SUMMARY, minor=False, botflag=True)
-        time.sleep(30)
     except pywikibot.exceptions.LockedPageError:
         print(page.title + " is protected")
     finally:
