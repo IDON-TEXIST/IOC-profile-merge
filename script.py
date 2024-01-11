@@ -63,7 +63,8 @@ for page in pageset:
     
     # olympics.com seems to block automated traffic, so we get the target from the headers instead without connecting to them.
     try:
-        newid = requests.head("http://www.olympic.org/" + id, timeout=5, headers=HEADERS).headers['Location'][33:]
+        newid = requests.head("http://www.olympic.org/" + id, timeout=5, headers=HEADERS).headers['Location'][24:]
+        print(newid[24:])
     except ReadTimeout:
         print("Editing " + page.title() + " failed because of timeout. " + id)
         continue
