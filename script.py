@@ -13,6 +13,7 @@ OLYMPICS_COM_PROFILE = [matchBuilder.pattern("Olympics.com profile"), matchBuild
 EDIT_SUMMARY = "{{[[Template:IOC profile|IOC profile]]}} is being merged into {{[[Template:Olympics.com profile|Olympics.com profile]]}} "
 EDIT_SUMMARY += "([[Wikipedia:Templates for discussion/Log/2021 May 6#Template:Olympic Channel|TfD]]) "
 EDIT_SUMMARY += "([[Wikipedia:Bots/Requests for approval/Yet another TfD implementor bot|BRfA]])"
+HEADERS = headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36', "Upgrade-Insecure-Requests": "1","DNT": "1","Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language": "en-US,en;q=0.5","Accept-Encoding": "gzip, deflate"}
 
 factory = pagegenerators.GeneratorFactory()
 factory.handle_arg("-transcludes:IOC profile")
@@ -62,7 +63,7 @@ for page in pageset:
     
     # olympics.com seems to block automated traffic, so we get the target from the headers instead without connecting to them.
     try:
-        newid = requests.head("https://www.olympic.org/" + id, timeout=5).headers['Location'][33:]
+        newid = requests.head("http://www.olympic.org/" + id, timeout=5, headers=HEADERS).headers['Location'][33:]
     except ReadTimeout:
         print("Editing " + page.title() + " failed because of timeout. " + id)
         continue
