@@ -3,13 +3,15 @@ import pywikibot
 import requests
 import re
 from pywikibot import pagegenerators
+import time
 
 site = pywikibot.Site()
 
 matchBuilder = pywikibot.textlib.MultiTemplateMatchBuilder(site)
 REPLACED_TEMPLATE = "IOC profile"
 IOC_PROFILE = matchBuilder.pattern(REPLACED_TEMPLATE)
-OLYMPICS_COM_PROFILE = [matchBuilder.pattern("Olympics.com profile"), matchBuilder.pattern("Olympic Channel"), matchBuilder.pattern("Olympics.com")]
+OLYMPICS_COM_PROFILE = [matchBuilder.pattern("Olympics.com profile"), matchBuilder.pattern("Olympic Channel"), matchBuilder.pattern("Olympics.com"), 
+                        matchBuilder.pattern("Olympic Channel profile"), matchBuilder.pattern("OC"), matchBuilder.pattern("Olympics profile"), matchBuilder.pattern("Olympic profile")]
 SPORTS_LINKS = [matchBuilder.pattern("Sports links"), matchBuilder.pattern("Sport links"), matchBuilder.pattern("Sport link")]
 EDIT_SUMMARY = "{{[[Template:IOC profile|IOC profile]]}} is being merged into {{[[Template:Olympics.com profile|Olympics.com profile]]}} "
 EDIT_SUMMARY += "([[Wikipedia:Templates for discussion/Log/2021 May 6#Template:Olympic Channel|TfD]]) "
@@ -18,11 +20,12 @@ HEADERS = headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWeb
 
 factory = pagegenerators.GeneratorFactory()
 factory.handle_arg("-transcludes:" + REPLACED_TEMPLATE)
+factory.handle_arg("-ns:0")
 pageset = factory.getCombinedGenerator()
 for page in pageset:
     if pywikibot.Page(site, "User:Yet another TfD implementor bot/Switch").text != "OK":
         print("Bot disabled by switch")
-        exit()
+        time.sleep(60)
 
     for regex in OLYMPICS_COM_PROFILE:
         if (re.search(regex, page.text) != None): # This template has the same merge target and would be a duplicate
@@ -36,17 +39,20 @@ for page in pageset:
 
     for regex in SPORTS_LINKS:
         if (re.search(regex, page.text) != None):
-            wikidataItem = pywikibot.ItemPage.fromPage(page)
-            wikidataItem.get()
-            if wikidataItem.claims:
-                if "P3171" in wikidataItem.claims:
-                    page.text = re.sub("\n.*\{\{" + REPLACED_TEMPLATE + ".*?\}\}", "", page.text)
-                    try:
-                        page.save(EDIT_SUMMARY, minor=False, botflag=True)
-                    except pywikibot.exceptions.LockedPageError:
-                        print(page.title() + " is protected")
-                    finally:
-                        continue
+            try:
+                wikidataItem = pywikibot.ItemPage.fromPage(page)
+                wikidataItem.get()
+                if wikidataItem.claims:
+                    if "P3171" in wikidataItem.claims:
+                        page.text = re.sub("\n.*\{\{" + REPLACED_TEMPLATE + ".*?\}\}", "", page.text)
+                        try:
+                            page.save(EDIT_SUMMARY, minor=False, botflag=True)
+                        except pywikibot.exceptions.LockedPageError:
+                            print(page.title() + " is protected")
+                        finally:
+                            continue
+            except pywikibot.exceptions.NoPageError:
+                pass
         
     match = re.search(IOC_PROFILE, page.text)
     if match is None:
@@ -63,13 +69,17 @@ for page in pageset:
     if "1" in params:
         id = params["1"]
     if id == None:
-        wikidataItem = pywikibot.ItemPage.fromPage(page)
-        wikidataItem.get()
-        if not wikidataItem.claims:
-            continue # All possible locations of the ID have been exhausted
-        if not "P3171" in wikidataItem.claims:
+        try:
+            wikidataItem = pywikibot.ItemPage.fromPage(page)
+            if (wikidataItem != None):
+                wikidataItem.get()
+                if not wikidataItem.claims:
+                    continue # All possible locations of the ID have been exhausted
+                if not "P3171" in wikidataItem.claims:
+                    continue
+                id = wikidataItem.claims["P3171"][0].getTarget()
+        except pywikibot.exceptions.NoPageError:
             continue
-        id = wikidataItem.claims["P3171"][0].getTarget()
     if "name" in params:
         name = params["name"]
     if "2" in params:
@@ -78,7 +88,6 @@ for page in pageset:
     # olympics.com seems to block automated traffic, so we get the target from the headers instead without connecting to them.
     try:
         newid = requests.head("http://www.olympic.org/" + id, timeout=5, headers=HEADERS).headers['Location'][24:]
-        print(newid[24:])
     except ReadTimeout:
         print("Editing " + page.title() + " failed because of timeout. " + id)
         continue
@@ -90,6 +99,6 @@ for page in pageset:
     try:
         page.save(EDIT_SUMMARY, minor=False, botflag=True)
     except pywikibot.exceptions.LockedPageError:
-        print(page.title + " is protected")
+        print(page.title() + " is protected")
     finally:
         continue
